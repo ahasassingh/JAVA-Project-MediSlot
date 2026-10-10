@@ -1,41 +1,64 @@
--- ===================================================
--- Script 07: Database Triggers & Audit Logging
--- Project: MediSlot Hospital Appointment System
--- ===================================================
+-- =====================================================================
+-- Script 07: Triggers & Audit Automation
+-- Project: MediSlot — Online Doctor Appointment Booking System
+-- Database Engine: MySQL 8.x
+-- =====================================================================
 
 USE medislot_db;
 
--- 1. Audit Log Table
-CREATE TABLE IF NOT EXISTS appointment_audit_logs (
-    log_id INT AUTO_INCREMENT PRIMARY KEY,
-    appointment_id INT,
-    action_type VARCHAR(20) NOT NULL, -- 'INSERT', 'UPDATE_CANCEL', etc.
-    old_status VARCHAR(20),
-    new_status VARCHAR(20),
-    performed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 DELIMITER $$
 
--- Trigger 1: After Appointment Insert
-DROP TRIGGER IF EXISTS trg_after_appointment_insert$$
-CREATE TRIGGER trg_after_appointment_insert
-AFTER INSERT ON appointments
-FOR EACH ROW
-BEGIN
-    INSERT INTO appointment_audit_logs (appointment_id, action_type, old_status, new_status)
-    VALUES (NEW.appointment_id, 'INSERT', NULL, NEW.status);
-END$$
-
--- Trigger 2: After Appointment Update (status change tracking)
-DROP TRIGGER IF EXISTS trg_after_appointment_update$$
-CREATE TRIGGER trg_after_appointment_update
+-- ---------------------------------------------------------------------
+-- Trigger 1: trg_appointment_update_audit
+-- Description: Automatically logs status changes on appointments to appointment_history
+-- ---------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_appointment_update_audit$$
+CREATE TRIGGER trg_appointment_update_audit
 AFTER UPDATE ON appointments
 FOR EACH ROW
 BEGIN
     IF OLD.status <> NEW.status THEN
-        INSERT INTO appointment_audit_logs (appointment_id, action_type, old_status, new_status)
-        VALUES (NEW.appointment_id, 'STATUS_UPDATE', OLD.status, NEW.status);
+        INSERT INTO appointment_history (
+            appointment_id,
+            action,
+            previous_status,
+            new_status,
+            changed_by,
+            remarks
+        )
+        VALUES (
+            NEW.appointment_id,
+            CASE 
+                WHEN NEW.status = 'CANCELLED' THEN 'CANCELLED'
+                WHEN NEW.status = 'COMPLETED' THEN 'COMPLETED'
+                ELSE 'STATUS_CHANGED'
+            END,
+            OLD.status,
+            NEW.status,
+            NULL,
+            CONCAT('Status automatically transitioned from ', OLD.status, ' to ', NEW.status)
+        );
+    END IF;
+END$$
+
+-- ---------------------------------------------------------------------
+-- Trigger 2: trg_prevent_slot_double_booking
+-- Description: Business rule validation preventing booking an already BOOKED slot.
+-- ---------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_prevent_slot_double_booking$$
+CREATE TRIGGER trg_prevent_slot_double_booking
+BEFORE INSERT ON appointments
+FOR EACH ROW
+BEGIN
+    DECLARE v_slot_status VARCHAR(20);
+
+    SELECT status INTO v_slot_status
+    FROM time_slots
+    WHERE slot_id = NEW.slot_id;
+
+    IF v_slot_status IS NOT NULL AND v_slot_status <> 'AVAILABLE' THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Validation Error: Slot is not available for booking.';
     END IF;
 END$$
 
