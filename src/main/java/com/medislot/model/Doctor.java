@@ -6,9 +6,10 @@ import java.sql.Timestamp;
 public class Doctor {
     private int doctorId;
     private int userId;
+    private int specialtyId;
+    private String specialtyName;
     private String firstName;
     private String lastName;
-    private String specialization;
     private String qualification;
     private String phone;
     private String email;
@@ -18,14 +19,16 @@ public class Doctor {
 
     public Doctor() {}
 
-    public Doctor(int doctorId, int userId, String firstName, String lastName, String specialization,
-                  String qualification, String phone, String email, BigDecimal consultationFee,
+    public Doctor(int doctorId, int userId, int specialtyId, String specialtyName,
+                  String firstName, String lastName, String qualification,
+                  String phone, String email, BigDecimal consultationFee,
                   String roomNumber, Timestamp createdAt) {
         this.doctorId = doctorId;
         this.userId = userId;
+        this.specialtyId = specialtyId;
+        this.specialtyName = specialtyName;
         this.firstName = firstName;
         this.lastName = lastName;
-        this.specialization = specialization;
         this.qualification = qualification;
         this.phone = phone;
         this.email = email;
@@ -40,6 +43,12 @@ public class Doctor {
     public int getUserId() { return userId; }
     public void setUserId(int userId) { this.userId = userId; }
 
+    public int getSpecialtyId() { return specialtyId; }
+    public void setSpecialtyId(int specialtyId) { this.specialtyId = specialtyId; }
+
+    public String getSpecialtyName() { return specialtyName; }
+    public void setSpecialtyName(String specialtyName) { this.specialtyName = specialtyName; }
+
     public String getFirstName() { return firstName; }
     public void setFirstName(String firstName) { this.firstName = firstName; }
 
@@ -47,9 +56,6 @@ public class Doctor {
     public void setLastName(String lastName) { this.lastName = lastName; }
 
     public String getFullName() { return "Dr. " + firstName + " " + lastName; }
-
-    public String getSpecialization() { return specialization; }
-    public void setSpecialization(String specialization) { this.specialization = specialization; }
 
     public String getQualification() { return qualification; }
     public void setQualification(String qualification) { this.qualification = qualification; }
@@ -71,6 +77,6 @@ public class Doctor {
 
     @Override
     public String toString() {
-        return getFullName() + " (" + specialization + ")";
+        return getFullName() + " (" + (specialtyName != null ? specialtyName : "Specialist") + ")";
     }
 }

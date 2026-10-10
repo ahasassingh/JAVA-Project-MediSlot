@@ -4,10 +4,12 @@ import com.medislot.dao.AppointmentDAO;
 import com.medislot.dao.DoctorDAO;
 import com.medislot.dao.PatientDAO;
 import com.medislot.dao.SlotDAO;
+import com.medislot.dao.SpecialtyDAO;
 import com.medislot.model.Appointment;
 import com.medislot.model.Doctor;
 import com.medislot.model.Patient;
 import com.medislot.model.Slot;
+import com.medislot.model.Specialty;
 import com.medislot.model.User;
 
 import java.sql.SQLException;
@@ -19,6 +21,7 @@ public class AppointmentService {
     private final SlotDAO slotDAO = new SlotDAO();
     private final DoctorDAO doctorDAO = new DoctorDAO();
     private final PatientDAO patientDAO = new PatientDAO();
+    private final SpecialtyDAO specialtyDAO = new SpecialtyDAO();
 
     public int bookAppointment(User currentUser, int slotId, String notes) throws SQLException, ServiceException {
         if (currentUser.getRole() != User.Role.PATIENT) {
@@ -35,14 +38,20 @@ public class AppointmentService {
             throw new ServiceException("Selected slot is no longer available.");
         }
 
-        return appointmentDAO.bookAppointment(slotId, patient.getPatientId(), slot.getDoctorId(), notes);
+        return appointmentDAO.bookAppointment(slotId, patient.getPatientId(), notes, currentUser.getUserId());
     }
 
-    public void cancelAppointment(User currentUser, int appointmentId) throws SQLException, ServiceException {
-        // Enforce authorization rules
-        boolean success = appointmentDAO.cancelAppointment(appointmentId);
+    public void cancelAppointment(User currentUser, int appointmentId, String reason) throws SQLException, ServiceException {
+        boolean success = appointmentDAO.cancelAppointment(appointmentId, currentUser.getUserId(), reason);
         if (!success) {
             throw new ServiceException("Failed to cancel appointment.");
+        }
+    }
+
+    public void rescheduleAppointment(User currentUser, int appointmentId, int newSlotId) throws SQLException, ServiceException {
+        boolean success = appointmentDAO.rescheduleAppointment(appointmentId, newSlotId, currentUser.getUserId());
+        if (!success) {
+            throw new ServiceException("Failed to reschedule appointment.");
         }
     }
 
@@ -63,6 +72,14 @@ public class AppointmentService {
 
     public List<Doctor> getAllDoctors() throws SQLException {
         return doctorDAO.getAllDoctors();
+    }
+
+    public List<Doctor> getDoctorsBySpecialty(int specialtyId) throws SQLException {
+        return doctorDAO.getDoctorsBySpecialty(specialtyId);
+    }
+
+    public List<Specialty> getAllSpecialties() throws SQLException {
+        return specialtyDAO.getAllSpecialties();
     }
 
     public List<Slot> getAvailableSlots(int doctorId) throws SQLException {
